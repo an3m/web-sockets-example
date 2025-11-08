@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NestJS Chat App - WebSocket Example</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .connection-status {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.disconnected {
+            background: #f44336;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .username-section {
+            padding: 20px;
+            background: #f9f9f9;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .username-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-content {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .message.own-message .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: auto;
+        }
+
+        .message-username {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .message.own-message .message-username {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .message-text {
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .message.own-message .message-time {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .system-message {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            font-style: italic;
+            padding: 8px;
+            margin: 10px 0;
+        }
+
+        .typing-indicator {
+            padding: 10px 20px;
+            font-size: 13px;
+            color: #666;
+            font-style: italic;
+            min-height: 30px;
+        }
+
+        .message-input-section {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-container input {
+            flex: 1;
+        }
+
+        .user-list {
+            padding: 10px 20px;
+            background: #f9f9f9;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Scrollbar styling */
+        .messages-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            💬 NestJS Chat App
+        </div>
+        
+        <div class="connection-status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Connecting...</span>
+        </div>
+
+        <div class="username-section" id="usernameSection">
+            <div class="username-input-container">
+                <input 
+                    type="text" 
+                    id="usernameInput" 
+                    placeholder="Enter your username"
+                    maxlength="20"
+                />
+                <button id="joinButton" onclick="joinChat()">Join Chat</button>
+            </div>
+        </div>
+
+        <div class="messages-container" id="messagesContainer">
+            <!-- Messages will be added here -->
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator"></div>
+
+        <div class="message-input-section hidden" id="messageSection">
+            <div class="input-container">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Type a message..."
+                    maxlength="500"
+                />
+                <button id="sendButton" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+
+        <div class="user-list" id="userList">
+            Users online: <span id="userCount">0</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://localhost:3000');
+        let currentUsername = '';
+        let isConnected = false;
+
+        const usernameInput = document.getElementById('usernameInput');
+        const joinButton = document.getElementById('joinButton');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const usernameSection = document.getElementById('usernameSection');
+        const messageSection = document.getElementById('messageSection');
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const typingIndicator = document.getElementById('typingIndicator');
+        let typingTimeout;
+
+        // Connection events
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            isConnected = true;
+            statusText.textContent = 'Connected';
+            statusDot.classList.remove('disconnected');
+            updateConnectionStatus();
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            isConnected = false;
+            statusText.textContent = 'Disconnected';
+            statusDot.classList.add('disconnected');
+            updateConnectionStatus();
+        });
+
+        // Note: 'join' event listener removed - we handle join via callback
+
+        // Receive messages
+        socket.on('message', (message) => {
+            console.log('Received message:', message);
+            if (message && message.username && message.message) {
+                addMessage(message);
+            }
+        });
+
+        // Receive recent messages when connecting
+        socket.on('recentMessages', (messages) => {
+            console.log('Received recent messages:', messages);
+            if (Array.isArray(messages)) {
+                messages.forEach(msg => {
+                    if (msg && msg.username && msg.message) {
+                        addMessage(msg, true); // true = don't scroll immediately
+                    }
+                });
+                scrollToBottom();
+            }
+        });
+
+        // User joined/left notifications
+        socket.on('userJoined', (data) => {
+            if (data && data.username && data.username !== currentUsername) {
+                addSystemMessage(`${data.username} joined the chat`);
+            }
+        });
+
+        socket.on('userLeft', (data) => {
+            if (data && data.username && data.username !== currentUsername) {
+                addSystemMessage(`${data.username} left the chat`);
+            }
+        });
+
+        // Typing indicators
+        socket.on('typing', (data) => {
+            if (data.isTyping) {
+                typingIndicator.textContent = `${data.username} is typing...`;
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    typingIndicator.textContent = '';
+                }, 3000);
+            } else {
+                typingIndicator.textContent = '';
+            }
+        });
+
+        // Online users
+        socket.on('onlineUsers', (data) => {
+            const userCountEl = document.getElementById('userCount');
+            if (userCountEl) {
+                userCountEl.textContent = data.count || 0;
+            }
+        });
+
+        // Message edited
+        socket.on('messageEdited', (message) => {
+            console.log('Message edited:', message);
+            if (message && message.id) {
+                const messageDiv = document.querySelector(`[data-message-id="${message.id}"]`);
+                if (messageDiv) {
+                    updateMessageElement(messageDiv, message);
+                    // Re-add action buttons if still own message and not deleted
+                    if (messageDiv.classList.contains('own-message') && !message.isDeleted) {
+                        addActionButtons(messageDiv, message);
+                    }
+                } else {
+                    addMessage(message);
+                }
+            }
+        });
+
+        // Message deleted
+        socket.on('messageDeleted', (message) => {
+            console.log('Message deleted:', message);
+            if (message && message.id) {
+                const messageDiv = document.querySelector(`[data-message-id="${message.id}"]`);
+                if (messageDiv) {
+                    updateMessageElement(messageDiv, message);
+                    // Remove action buttons for deleted messages
+                    const actions = messageDiv.querySelector('.message-actions');
+                    if (actions) {
+                        actions.remove();
+                    }
+                } else {
+                    addMessage(message);
+                }
+            }
+        });
+
+        // Room stats
+        socket.on('roomStats', (stats) => {
+            console.log('Room stats:', stats);
+        });
+
+        // Functions
+        function updateConnectionStatus() {
+            joinButton.disabled = !isConnected;
+            sendButton.disabled = !isConnected || !currentUsername;
+        }
+
+        function joinChat() {
+            const username = usernameInput.value.trim();
+            if (!username) {
+                alert('Please enter a username');
+                return;
+            }
+            if (!isConnected) {
+                alert('Not connected to server');
+                return;
+            }
+            
+            socket.emit('join', { username }, (response) => {
+                if (response && response.success) {
+                    currentUsername = response.username;
+                    usernameSection.classList.add('hidden');
+                    messageSection.classList.remove('hidden');
+                    messageInput.focus();
+                    addSystemMessage(`Welcome, ${currentUsername}!`);
+                    updateConnectionStatus();
+                } else if (response && response.error) {
+                    alert(response.error);
+                }
+            });
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !currentUsername) {
+                if (!message) {
+                    messageInput.focus();
+                }
+                return;
+            }
+
+            // Clear input immediately for better UX
+            messageInput.value = '';
+            messageInput.focus();
+            
+            // Send message with callback for error handling
+            socket.emit('message', {
+                message: message
+            }, (response) => {
+                if (response && response.error) {
+                    alert(response.error);
+                    // Restore message on error
+                    messageInput.value = message;
+                    messageInput.focus();
+                }
+            });
+
+            socket.emit('typing', { isTyping: false });
+        }
+
+        const messageMap = new Map(); // Store messages by ID for editing/deleting
+
+        function addMessage(message, isHistorical = false) {
+            // Skip system/notification messages that aren't actual chat messages
+            if (message.messageType === 'system' || message.messageType === 'notification') {
+                return;
+            }
+
+            // Check if message already exists (for editing)
+            const existingDiv = message.id ? document.querySelector(`[data-message-id="${message.id}"]`) : null;
+            if (existingDiv && !isHistorical) {
+                // Update existing message
+                updateMessageElement(existingDiv, message);
+                // Re-add action buttons if needed
+                if (existingDiv.classList.contains('own-message') && !message.isDeleted) {
+                    addActionButtons(existingDiv, message);
+                }
+                scrollToBottom();
+                return;
+            }
+
+            // Don't add duplicate messages
+            if (message.id && messageMap.has(message.id) && !isHistorical) {
+                return;
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            if (message.id) {
+                messageDiv.setAttribute('data-message-id', message.id);
+            }
+            
+            const isOwnMessage = message.username === currentUsername;
+            if (isOwnMessage) {
+                messageDiv.classList.add('own-message');
+            }
+
+            updateMessageElement(messageDiv, message);
+
+            // Add edit/delete buttons for own messages
+            if (isOwnMessage && !message.isDeleted) {
+                addActionButtons(messageDiv, message);
+            }
+
+            messagesContainer.appendChild(messageDiv);
+            if (message.id) {
+                messageMap.set(message.id, message);
+            }
+
+            if (!isHistorical) {
+                scrollToBottom();
+            }
+        }
+
+        function addActionButtons(messageDiv, message) {
+            // Remove existing action buttons if any
+            const existingActions = messageDiv.querySelector('.message-actions');
+            if (existingActions) {
+                existingActions.remove();
+            }
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions';
+            actionsDiv.style.cssText = 'display: flex; gap: 8px; margin-top: 5px;';
+            
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Edit';
+            editBtn.style.cssText = 'padding: 4px 8px; font-size: 11px; cursor: pointer; border-radius: 4px; border: none; background: rgba(255,255,255,0.2); color: white;';
+            editBtn.onclick = () => editMessage(message.id);
+            actionsDiv.appendChild(editBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.style.cssText = 'padding: 4px 8px; font-size: 11px; cursor: pointer; border-radius: 4px; border: none; background: rgba(244, 67, 54, 0.8); color: white;';
+            deleteBtn.onclick = () => deleteMessage(message.id);
+            actionsDiv.appendChild(deleteBtn);
+
+            messageDiv.querySelector('.message-content').appendChild(actionsDiv);
+        }
+
+        function updateMessageElement(element, message) {
+            // Get or create content div
+            let contentDiv = element.querySelector('.message-content');
+            if (!contentDiv) {
+                contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                element.appendChild(contentDiv);
+            } else {
+                // Clear existing content but keep action buttons
+                const actions = contentDiv.querySelector('.message-actions');
+                contentDiv.innerHTML = '';
+                if (actions) {
+                    contentDiv.appendChild(actions);
+                }
+            }
+
+            const usernameDiv = document.createElement('div');
+            usernameDiv.className = 'message-username';
+            usernameDiv.textContent = message.username || 'Unknown';
+            contentDiv.insertBefore(usernameDiv, contentDiv.firstChild);
+
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            textDiv.textContent = message.isDeleted ? '[This message was deleted]' : (message.message || '');
+            if (message.isDeleted) {
+                textDiv.style.opacity = '0.6';
+                textDiv.style.fontStyle = 'italic';
+            }
+            contentDiv.insertBefore(textDiv, contentDiv.querySelector('.message-actions') || null);
+
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            const timestamp = message.timestamp ? new Date(message.timestamp) : new Date();
+            let timeText = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (message.isEdited) {
+                timeText += ' (edited)';
+            }
+            timeDiv.textContent = timeText;
+            contentDiv.appendChild(timeDiv);
+        }
+
+        function editMessage(messageId) {
+            const message = messageMap.get(messageId);
+            if (!message) return;
+
+            const newMessage = prompt('Edit your message:', message.message);
+            if (newMessage && newMessage.trim() !== message.message) {
+                socket.emit('editMessage', {
+                    messageId: messageId,
+                    newMessage: newMessage.trim()
+                }, (response) => {
+                    if (response && response.error) {
+                        alert(response.error);
+                    }
+                });
+            }
+        }
+
+        function deleteMessage(messageId) {
+            if (!confirm('Are you sure you want to delete this message?')) return;
+
+            socket.emit('deleteMessage', {
+                messageId: messageId
+            }, (response) => {
+                if (response && response.error) {
+                    alert(response.error);
+                }
+            });
+        }
+
+        function addSystemMessage(text) {
+            const systemDiv = document.createElement('div');
+            systemDiv.className = 'system-message';
+            systemDiv.textContent = text;
+            messagesContainer.appendChild(systemDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Enter key handlers
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                joinChat();
+            }
+        });
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Typing indicator
+        messageInput.addEventListener('input', () => {
+            if (currentUsername) {
+                socket.emit('typing', { isTyping: true });
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    socket.emit('typing', { isTyping: false });
+                }, 1000);
+            }
+        });
+
+        // Initialize
+        updateConnectionStatus();
+    </script>
+</body>
+</html>
+<button id="disconnectButton" onclick="disconnectChat()" style="margin: 10px; padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">
+    Disconnect
+</button>
+
+<script>
+    function disconnectChat() {
+        if (isConnected) {
+            socket.disconnect();
+            currentUsername = '';
+            usernameSection.classList.remove('hidden');
+            messageSection.classList.add('hidden');
+            messagesContainer.innerHTML = '';
+            typingIndicator.textContent = '';
+            addSystemMessage('You have disconnected from the chat.');
+            updateConnectionStatus();
+        } else {
+            alert('You are not connected to the server.');
+        }
+    }
+</script>
