@@ -157,28 +157,28 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // @SubscribeMessage('markAsRead')
-  // async handleMarkAsRead(
-  //   @ConnectedSocket() client: AuthenticatedSocket,
-  //   @MessageBody() data: { messageId: string },
-  // ) {
-  //   try {
-  //     const message = await this.messagesService.markAsRead(
-  //       data.messageId,
-  //       client.user._id.toString(),
-  //     );
+  @SubscribeMessage('markAsRead')
+  async handleMarkAsRead(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { messageId: string },
+  ) {
+    try {
+      const message = await this.messagesService.markAsRead(
+        data.messageId,
+        client.user?._id.toString() ?? '',
+      );
 
-  //     // Notify sender that message was read
-  //     this.server.to(`user_${message.senderId.toString()}`).emit('messageRead', {
-  //       messageId: data.messageId,
-  //       readBy: client.user._id,
-  //     });
+      // Notify sender that message was read
+      this.server.to(`user_${message.senderId.toString()}`).emit('messageRead', {
+        messageId: data.messageId,
+        readBy: client.user?._id.toString(),
+      });
 
-  //   } catch (error) {
-  //     this.logger.error('Error marking message as read', error);
-  //     client.emit('error', { message: 'Failed to mark message as read' });
-  //   }
-  // }
+    } catch (error) {
+      this.logger.error('Error marking message as read', error);
+      client.emit('error', { message: 'Failed to mark message as read' });
+    }
+  }
 
   // @SubscribeMessage('typing')
   // handleTyping(
