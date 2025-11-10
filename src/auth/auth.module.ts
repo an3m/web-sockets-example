@@ -9,6 +9,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 // import { LocalStrategy } from './strategies/local.strategy';
 import { UsersModule } from '../users/users.module';
 import { LocalStrategy } from './strategies/local.strategy';
+import { WsAuthGuard } from './guards/ws-auth.guard';
 
 @Module({
   imports: [
@@ -24,8 +25,11 @@ import { LocalStrategy } from './strategies/local.strategy';
     AuthService,
     JwtStrategy,
     LocalStrategy,
+    WsAuthGuard,
   ],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService,
+    WsAuthGuard
+  ],
 })
 export class AuthModule { }

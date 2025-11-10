@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Chat, ChatDocument, ChatType } from './schemas/chat.schema';
+import { Chat, ChatDocument, ChatModel, ChatType } from './schemas/chat.schema';
 
 @Injectable()
 export class ChatsService {
@@ -12,7 +12,7 @@ export class ChatsService {
         return chat.save();
     }
 
-    async findUserChats(userId: string): Promise<Chat[]> {
+    async findUserChats(userId: string): Promise<ChatDocument[]> {
         return this.chatModel
             .find({
                 participants: new Types.ObjectId(userId),
@@ -24,6 +24,7 @@ export class ChatsService {
     }
 
     async findChatById(chatId: string): Promise<Chat | ChatDocument> {
+        console.log('Finding chat by ID:', chatId);
         const chat = await this.chatModel
             .findById(chatId)
             .populate('participants', 'username email avatar')

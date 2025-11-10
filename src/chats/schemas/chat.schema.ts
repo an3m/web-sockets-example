@@ -1,13 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, HydratedDocument, Types } from 'mongoose';
 
-export type ChatDocument = Chat & Document;
+export type ChatDocument = HydratedDocument<Chat>;
 
 export enum ChatType {
     PRIVATE = 'private',
     GROUP = 'group',
 }
-
+export type ChatModel = Chat & { _id: any };
 @Schema({ timestamps: true })
 export class Chat {
     @Prop({ required: true, enum: ChatType })

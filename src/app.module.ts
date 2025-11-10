@@ -14,8 +14,8 @@ import { ChatsModule } from './chats/chats.module';
     MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost:27017/chat-app'),
     UsersModule,
     AuthModule,
-    MessagesModule,
-    ChatsModule
+    ChatsModule,
+    MessagesModule
   ],
   controllers: [AppController],
   providers: [AppService],

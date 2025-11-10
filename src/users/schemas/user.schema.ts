@@ -1,8 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Exclude } from 'class-transformer';
-import { Document } from 'mongoose';
+import { HydratedDocument, } from 'mongoose';
 
-export type UserDocument = User & Document;
+export type UserDocument = HydratedDocument<User>;
+export type UserModel = User & { _id: any };
 
 @Schema({ timestamps: true })
 export class User {

@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
-import { User, UserDocument } from '../users/schemas/user.schema';
+import { User, UserDocument, UserModel } from '../users/schemas/user.schema';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload, LoginResponse } from './interfaces';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
@@ -60,12 +60,13 @@ export class AuthService {
         return this.login({ email: user.email, password: userData.password });
     }
 
-    async validateToken(payload: JwtPayload): Promise<User> {
+    async validateToken(payload: JwtPayload): Promise<UserModel> {
 
         const user = await this.userModel.findById(payload.sub);
         if (!user || !user.isActive) {
             throw new UnauthorizedException('Invalid token');
         }
+        // console.log('Validated token for user:', String(user._id));
         return user;
     }
 }
