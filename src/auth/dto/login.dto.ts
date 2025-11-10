@@ -11,7 +11,6 @@ export class LoginDto {
   @MinLength(5)
   email: string;
 
-
   @IsString()
   @MinLength(6)
   @MaxLength(50)

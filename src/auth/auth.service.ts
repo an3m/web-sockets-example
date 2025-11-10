@@ -4,36 +4,43 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { User, UserDocument } from '../users/schemas/user.schema';
-import { LoginDto, RegisterUserDto } from './dto/login.dto';
+import { LoginDto } from './dto/login.dto';
 import { JwtPayload, LoginResponse } from './interfaces';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class AuthService {
     constructor(
         @InjectModel(User.name) private userModel: Model<UserDocument>,
+        private usersService: UsersService,
         private jwtService: JwtService,
     ) { }
 
-    async validateUser(email: string, password: string): Promise<UserDocument | null> {
+    async validateUser(email: string, password: string): Promise<User | null> {
         const user = await this.userModel.findOne({ email, isActive: true });
-        if (user && await bcrypt.compare(password, user.password)) {
-            return user;
-        }
+        if (!user) return null;
+        console.log(email, user?.email);
+        const isPasswordValid = user ? await bcrypt.compare(password, user.password) : false;
+        if (isPasswordValid) return user;
         return null;
     }
 
     async login(userData: LoginDto): Promise<LoginResponse> {
-        const user = await this.validateUser(userData.email, userData.password);
-        if (!user || !user.isActive || !user.id) {
+
+        const user = await this.usersService.findByEmail(userData.email);
+        console.log('Login attempt for user:', userData.email);
+        if (!user || !user.isActive) {
             throw new UnauthorizedException('Invalid credentials');
         }
-        const id: string = String(user.id);
+        const id: string = String(user._id);
 
         const payload: JwtPayload = { sub: id, username: user.username };
 
         return {
-            access_token: this.jwtService.sign(payload),
+            access_token: this.jwtService.sign(payload,
+
+            ),
             user: {
                 id: id,
                 email: user.email,
@@ -49,10 +56,8 @@ export class AuthService {
             ...userData,
             password: hashedPassword,
         });
-
         await user.save();
-
-        return this.login(user);
+        return this.login({ email: user.email, password: userData.password });
     }
 
     async validateToken(payload: JwtPayload): Promise<User> {
@@ -60,9 +65,7 @@ export class AuthService {
         const user = await this.userModel.findById(payload.sub);
         if (!user || !user.isActive) {
             throw new UnauthorizedException('Invalid token');
-
         }
         return user;
-
     }
 }

@@ -6,8 +6,8 @@ import { User } from './schemas/user.schema';
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
-  @Post()
-  createUser(@Body() userData: Partial<User>) {
-    return this.usersService.create(userData);
-  }
+  // @Post()
+  // createUser(@Body() userData: Partial<User>) {
+  //   return this.usersService.create(userData);
+  // }
 }

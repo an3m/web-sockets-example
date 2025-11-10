@@ -5,7 +5,7 @@ import { AuthService } from '../auth.service';
 import { JwtPayload } from '../interfaces';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     constructor(private readonly authService: AuthService) {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -15,11 +15,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     async validate(payload: JwtPayload) {
-
         const user = await this.authService.validateToken(payload);
-        if (!user) {
-            return null;
-        }
+        if (!user) return null;
         return user;// return user object to be attached to request
     }
 }
